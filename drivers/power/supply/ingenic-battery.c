@@ -16,7 +16,6 @@
 struct ingenic_battery {
 	struct device *dev;
 	struct iio_channel *channel;
-	struct power_supply_desc desc;
 	struct power_supply *battery;
 	struct power_supply_battery_info *info;
 };
@@ -122,12 +121,19 @@ static enum power_supply_property ingenic_battery_properties[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 };
 
+static const struct power_supply_desc ingenic_battery_desc = {
+	.name			= "jz-battery",
+	.type			= POWER_SUPPLY_TYPE_BATTERY,
+	.get_property		= ingenic_battery_get_property,
+	.properties		= ingenic_battery_properties,
+	.num_properties		= ARRAY_SIZE(ingenic_battery_properties),
+};
+
 static int ingenic_battery_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct ingenic_battery *bat;
 	struct power_supply_config psy_cfg = {};
-	struct power_supply_desc *desc;
 	int ret;
 
 	bat = devm_kzalloc(dev, sizeof(*bat), GFP_KERNEL);
@@ -139,16 +145,10 @@ static int ingenic_battery_probe(struct platform_device *pdev)
 	if (IS_ERR(bat->channel))
 		return PTR_ERR(bat->channel);
 
-	desc = &bat->desc;
-	desc->name = "jz-battery";
-	desc->type = POWER_SUPPLY_TYPE_BATTERY;
-	desc->properties = ingenic_battery_properties;
-	desc->num_properties = ARRAY_SIZE(ingenic_battery_properties);
-	desc->get_property = ingenic_battery_get_property;
 	psy_cfg.drv_data = bat;
 	psy_cfg.fwnode = dev_fwnode(dev);
 
-	bat->battery = devm_power_supply_register(dev, desc, &psy_cfg);
+	bat->battery = devm_power_supply_register(dev, &ingenic_battery_desc, &psy_cfg);
 	if (IS_ERR(bat->battery))
 		return dev_err_probe(dev, PTR_ERR(bat->battery),
 				     "Unable to register battery\n");
