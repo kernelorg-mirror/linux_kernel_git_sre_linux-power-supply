@@ -603,6 +603,11 @@ int power_supply_get_battery_info(struct power_supply *psy,
 	u32 *propdata;
 	u32 min_max[2];
 
+	if (psy->battery_info) {
+		*info_out = psy->battery_info;
+		return 0;
+	}
+
 	srcnode = dev_fwnode(&psy->dev);
 	if (!srcnode && psy->dev.parent)
 		srcnode = dev_fwnode(psy->dev.parent);
@@ -863,6 +868,10 @@ void power_supply_put_battery_info(struct power_supply *psy,
 				   struct power_supply_battery_info *info)
 {
 	int i;
+
+	/* battery-info is still needed by the core */
+	if (psy->battery_info)
+		return;
 
 	for (i = 0; i < POWER_SUPPLY_OCV_TEMP_MAX; i++) {
 		if (info->ocv_table[i])
